@@ -1,0 +1,37 @@
+---
+
+- hosts: all
+  become: yes
+  tasks:
+
+      - name: Ensure required system packages are present
+        apt: name={{ item }} state=latest update_cache=yes
+        with_items:
+            - apt-transport-https
+            - ca-certificates
+            - python-apt
+            - python-pip
+
+      - name: Ensure the docker repository key is present
+        apt_key: keyserver="hkp://p80.pool.sks-keyservers.net:80" id=58118E89F3A912897C070ADBF76221572C52609D
+
+      - name: Ensure the docker repository is configured
+        apt_repository: repo="deb https://apt.dockerproject.org/repo ubuntu-trusty main" state=present
+
+      - name: Ensure docker is present
+        apt: name=docker-engine state=latest
+        notify:
+            - restart docker
+
+      - name: Ensure the Vagrant user is added to the docker group
+        user: name=vagrant groups=docker append=yes
+
+      - name: Ensure required python modules are present
+        pip: name={{ item }} state=latest
+        with_items:
+            - docker-compose
+            - virtualenv
+
+  handlers:
+      - name: restart docker
+        service: name=docker state=restarted
